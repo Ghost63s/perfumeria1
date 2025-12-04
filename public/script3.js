@@ -655,8 +655,13 @@ function HomePage() {
 function LoginPage() {
     return html`
         <div class="flex items-center justify-center min-h-screen bg-gray-900/90 py-12">
-            <div class="glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-md animate-fadeInUp">
-                <h2 class="text-3xl font-display font-bold text-amber-300 mb-6 text-center">Ingresar a Mi Cuenta</h2>
+        <div class="relative glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-md animate-fadeInUp">
+                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Regresar
+                </button>
+                <h2 class="text-3xl font-display font-bold text-amber-300 mb-6 text-center mt-8">Ingresar a Mi Cuenta</h2>
+
                 <form id="login-form" onsubmit="handleLogin(event)">
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Correo</label>
@@ -679,8 +684,12 @@ function LoginPage() {
 function RegisterPage() {
     return html`
         <div class="flex items-center justify-center min-h-screen bg-gray-900/90 py-12">
-            <div class="glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-lg animate-fadeInUp">
-                <h2 class="text-3xl font-display font-bold text-amber-300 mb-6 text-center">Crear Nueva Cuenta</h2>
+           <div class="relative glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-lg animate-fadeInUp">
+                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    Regresar
+                </button>
+                <h2 class="text-3xl font-display font-bold text-amber-300 mb-6 text-center mt-8">Crear Nueva Cuenta</h2>
                 <form id="register-form" onsubmit="handleRegister(event)">
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Nombre</label>
