@@ -3,10 +3,10 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const db = require('./db');
-// 🚨 CAMBIO 1: Usar la variable de entorno para la clave de Stripe
+//  CAMBIO 1: Usar la variable de entorno para la clave de Stripe
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
 const app = express();
-// 🚨 CAMBIO 2: Usar la variable de entorno PORT o un puerto de fallback (8080)
+//  CAMBIO 2: Usar la variable de entorno PORT o un puerto de fallback (8080)
 const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
