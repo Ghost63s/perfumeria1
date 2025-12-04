@@ -1480,7 +1480,6 @@ function renderApp() {
 
     if (state.currentPage === 'home') startCarousel();
 }
-
 window.onload = function() { 
     checkSession();
     fetchProductsFromDB();
