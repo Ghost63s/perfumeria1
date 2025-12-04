@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-// 🚨 validación estricta
+// validación estricta
 if (!process.env.DATABASE_URL) {
     console.error('🔥 ERROR CRÍTICO: No hay variable DATABASE_URL configurada.');
 }
