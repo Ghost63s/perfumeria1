@@ -103,6 +103,26 @@ app.post('/api/admin/create', async (req, res) => {
     }
 });
 
+app.put('/api/admin/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, email, password, role } = req.body;
+    try {
+        let query, params;
+        if (password) {
+            query = 'UPDATE usuarios SET nombre = $1, correo = $2, contrasena_hash = $3, rol = $4 WHERE id = $5';
+            params = [name, email, password, role, id];
+        } else {
+            query = 'UPDATE usuarios SET nombre = $1, correo = $2, rol = $3 WHERE id = $4';
+            params = [name, email, role, id];
+        }
+        await db.query(query, params);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
+    }
+});
+
 app.delete('/api/admin/users/:id', async (req, res) => {
     const { id } = req.params;
     try {
