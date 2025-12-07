@@ -58,6 +58,16 @@ function setState(newState) {
     renderApp();
 }
 
+// Detect if the current browser is Safari (not Chrome/Android)
+function isSafariBrowser() {
+    try {
+        const ua = navigator.userAgent || '';
+        return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium') && !ua.includes('Android') && !ua.includes('CriOS') && !ua.includes('FxiOS');
+    } catch (err) {
+        return false;
+    }
+}
+
 function html(strings, ...values) {
     let result = strings[0];
     for (let i = 0; i < values.length; i++) {
@@ -112,9 +122,13 @@ async function fetchProductsFromDB() {
     }
 }
 
-async function fetchUsersFromDB() {
+async function fetchUsersFromDB(forceNoCache = false) {
     try {
-        const response = await fetch('/api/users');
+        const useNoCache = forceNoCache || isSafariBrowser();
+        const url = '/api/users' + (useNoCache ? `?ts=${Date.now()}` : '');
+        const fetchOpts = useNoCache ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } } : {};
+        if (useNoCache) console.debug('[Safari] fetching users with no-cache:', url);
+        const response = await fetch(url, fetchOpts);
         if (!response.ok) throw new Error('Error al obtener usuarios');
         
         const dbUsers = await response.json();
@@ -134,6 +148,19 @@ async function fetchUsersFromDB() {
             users: regularUsers, 
             admins: admins 
         });
+
+        // Safari sometimes aggressively caches GET responses or delays DOM updates.
+        // If Safari, we force a small repaint/toggle on the user table containers to ensure they reflect the new data.
+        if (isSafariBrowser()) {
+            ['clients-table-wrapper', 'admins-table-wrapper'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'none';
+                    // short timeout to force reflow
+                    setTimeout(() => { el.style.display = ''; }, 60);
+                }
+            });
+        }
     } catch (error) {
         console.error("Error usuarios:", error);
     }
@@ -200,7 +227,7 @@ async function createAdmin(e) {
         const data = await response.json();
         if (data.success) {
             setState({ error: '✅ Administrador creado exitosamente' });
-            fetchUsersFromDB(); 
+            fetchUsersFromDB(isSafariBrowser()); 
             form.reset();
         } else {
             setState({ error: '❌ ' + data.message });
@@ -253,7 +280,7 @@ async function updateUser(e) {
         const data = await response.json();
         if (data.success) {
             setState({ error: '✅ Usuario actualizado exitosamente', editingUser: null });
-            fetchUsersFromDB();
+            fetchUsersFromDB(isSafariBrowser());
             form.reset();
         } else {
             setState({ error: '❌ ' + data.message });
@@ -273,7 +300,7 @@ async function deleteUser(id) {
 
         if (data.success) {
             setState({ error: '🗑️ Usuario eliminado' });
-            fetchUsersFromDB(); 
+            fetchUsersFromDB(isSafariBrowser()); 
         } else {
             setState({ error: '❌ ' + data.message });
         }
@@ -1298,7 +1325,7 @@ function AdminPage() {
                         <h2 class="text-2xl text-blue-400 mb-6 font-bold flex items-center gap-2">
                             ${icons.User(24)} Clientes
                         </h2>
-                        <div class="overflow-x-auto max-h-64">
+                        <div id="clients-table-wrapper" class="overflow-x-auto max-h-64">
                             <table class="w-full text-left text-sm text-gray-300">
                                 <thead class="text-xs uppercase bg-blue-900/30 text-blue-300 sticky top-0">
                                     <tr>
@@ -1327,7 +1354,7 @@ function AdminPage() {
                         <h2 class="text-2xl text-purple-400 mb-6 font-bold flex items-center gap-2">
                             ${icons.User(24)} Administradores
                         </h2>
-                        <div class="overflow-x-auto max-h-64">
+                        <div id="admins-table-wrapper" class="overflow-x-auto max-h-64">
                             <table class="w-full text-left text-sm text-gray-300">
                                 <thead class="text-xs uppercase bg-purple-900/30 text-purple-300 sticky top-0">
                                     <tr>
