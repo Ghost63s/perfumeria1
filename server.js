@@ -93,7 +93,7 @@ app.post('/api/admin/create', async (req, res) => {
     const { name, email, password, role } = req.body;
     try {
         const { rows: result } = await db.query(
-            'INSERT INTO usuarios (nombre, correo, contrasena_hash, rol) VALUES ($1, $2, $3, $4)',
+           
             [name, email, password, role || 'admin']
         );
         res.json({ success: true });
