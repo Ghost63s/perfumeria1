@@ -47,7 +47,8 @@ let state = {
     error: null,
     loading: true,
     editingProduct: null,
-    adminSearchQuery: ''
+    adminSearchQuery: '',
+    editingUser: null
 };
 
 let carouselInterval;
@@ -55,6 +56,16 @@ let carouselInterval;
 function setState(newState) {
     state = { ...state, ...newState };
     renderApp();
+}
+
+// Detect if the current browser is Safari (not Chrome/Android)
+function isSafariBrowser() {
+    try {
+        const ua = navigator.userAgent || '';
+        return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium') && !ua.includes('Android') && !ua.includes('CriOS') && !ua.includes('FxiOS');
+    } catch (err) {
+        return false;
+    }
 }
 
 function html(strings, ...values) {
@@ -111,9 +122,13 @@ async function fetchProductsFromDB() {
     }
 }
 
-async function fetchUsersFromDB() {
+async function fetchUsersFromDB(forceNoCache = false) {
     try {
-        const response = await fetch('/api/users');
+        const useNoCache = forceNoCache || isSafariBrowser();
+        const url = '/api/users' + (useNoCache ? `?ts=${Date.now()}` : '');
+        const fetchOpts = useNoCache ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } } : {};
+        if (useNoCache) console.debug('[Safari] fetching users with no-cache:', url);
+        const response = await fetch(url, fetchOpts);
         if (!response.ok) throw new Error('Error al obtener usuarios');
         
         const dbUsers = await response.json();
@@ -133,6 +148,19 @@ async function fetchUsersFromDB() {
             users: regularUsers, 
             admins: admins 
         });
+
+        // Safari sometimes aggressively caches GET responses or delays DOM updates.
+        // If Safari, we force a small repaint/toggle on the user table containers to ensure they reflect the new data.
+        if (isSafariBrowser()) {
+            ['clients-table-wrapper', 'admins-table-wrapper'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'none';
+                    // short timeout to force reflow
+                    setTimeout(() => { el.style.display = ''; }, 60);
+                }
+            });
+        }
     } catch (error) {
         console.error("Error usuarios:", error);
     }
@@ -199,7 +227,7 @@ async function createAdmin(e) {
         const data = await response.json();
         if (data.success) {
             setState({ error: '✅ Administrador creado exitosamente' });
-            fetchUsersFromDB(); 
+            fetchUsersFromDB(isSafariBrowser()); 
             form.reset();
         } else {
             setState({ error: '❌ ' + data.message });
@@ -207,6 +235,59 @@ async function createAdmin(e) {
     } catch (error) {
         console.error(error);
         setState({ error: '⚠️ Error al crear admin' });
+    }
+}
+
+function editUser(user) {
+    setState({ editingUser: user });
+    const form = document.getElementById('edit-user-form');
+    if (form) {
+        form.elements.editName.value = user.name;
+        form.elements.editEmail.value = user.email;
+        form.elements.editRole.value = user.privileges === 'Control Total' ? 'admin' : 'usuario';
+    }
+}
+
+function cancelEditUser() {
+    setState({ editingUser: null });
+    const form = document.getElementById('edit-user-form');
+    if (form) form.reset();
+}
+
+async function updateUser(e) {
+    e.preventDefault();
+    const form = document.getElementById('edit-user-form');
+    const name = form.elements.editName.value;
+    const email = form.elements.editEmail.value;
+    const password = form.elements.editPassword.value;
+    const role = form.elements.editRole.value;
+
+    if (!name || !email) {
+        setState({ error: '⚠️ El nombre y correo son obligatorios' });
+        return;
+    }
+
+    try {
+        const updateData = { name, email, role };
+        if (password) updateData.password = password;
+
+        const response = await fetch(`/api/admin/users/${state.editingUser.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            setState({ error: '✅ Usuario actualizado exitosamente', editingUser: null });
+            fetchUsersFromDB(isSafariBrowser());
+            form.reset();
+        } else {
+            setState({ error: '❌ ' + data.message });
+        }
+    } catch (error) {
+        console.error(error);
+        setState({ error: '⚠️ Error al actualizar usuario' });
     }
 }
 
@@ -219,7 +300,7 @@ async function deleteUser(id) {
 
         if (data.success) {
             setState({ error: '🗑️ Usuario eliminado' });
-            fetchUsersFromDB(); 
+            fetchUsersFromDB(isSafariBrowser()); 
         } else {
             setState({ error: '❌ ' + data.message });
         }
@@ -357,11 +438,17 @@ async function handleRegister(e) {
 
 function handleContact(e) {
     e.preventDefault();
-    const form = document.getElementById('contact-form');
-    const name = form.elements.contactName.value;
-    if (name) {
-        setState({ error: `✅ ¡Gracias ${name}! Tu mensaje ha sido enviado. Te contactaremos pronto.`, currentPage: 'home' });
+    const name = document.getElementById('contactName').value.trim();
+    const message = document.getElementById('contactMessage').value.trim();
+    
+    if (!name || !message) {
+        setState({ error: '⚠️ Por favor, llene la información completa (Nombre y Mensaje)' });
+        return;
     }
+    
+    setState({ error: '✅ Su mensaje ha sido enviado correctamente. ¡Gracias por contactarnos!' });
+    document.getElementById('contactName').value = '';
+    document.getElementById('contactMessage').value = '';
 }
 
 async function addToCart(product) {
@@ -506,8 +593,10 @@ function Navbar() {
     return html`
         <header class="glass sticky top-0 z-50 border-b border-amber-400/30 shadow-2xl">
             <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between py-4">
-                    <div class="flex items-center gap-3 cursor-pointer group" onclick="setState({currentPage: state.isLoggedIn ? 'catalog' : 'home', categoryDropdownOpen: false, adminMenuOpen: false, currentCategory: 'all'})">
+                <!-- Logo centrado arriba en móvil, a la izquierda en desktop -->
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between py-4 gap-4">
+                    <!-- Logo -->
+                    <div class="flex items-center justify-center lg:justify-start gap-3 cursor-pointer group" onclick="setState({currentPage: state.isLoggedIn ? 'catalog' : 'home', categoryDropdownOpen: false, adminMenuOpen: false, currentCategory: 'all'})">
                         <div class="gradient-gold p-3 rounded-2xl shadow-xl transform group-hover:rotate-12 transition-all duration-300 animate-pulse-glow">
                             ${icons.Package(30, 'text-gray-900')}
                         </div>
@@ -516,6 +605,8 @@ function Navbar() {
                             <p class="text-xs text-amber-300 font-light tracking-[0.2em] uppercase">Luxury Fragrances</p>
                         </div>
                     </div>
+
+                    <!-- Navegación desktop -->
                     <nav class="hidden lg:flex items-center gap-8 text-sm font-semibold tracking-wide">
                         ${isAdmin ? AdminNavbarDropdown() : html`
                             <button onclick="setCategoryFilter('all')" class="text-amber-200 hover:text-amber-400 transition-all">CATÁLOGO</button>
@@ -525,47 +616,55 @@ function Navbar() {
                             <button onclick="setState({currentPage: 'contact', categoryDropdownOpen: false})" class="text-amber-200 hover:text-amber-400 transition-all">CONTACTO</button>
                         `}
                     </nav>
-                    <div class="flex items-center gap-4">
+
+                    <!-- Botones responsive -->
+                    <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2 sm:gap-3">
                         ${!isAdmin ? html`
                             <button onclick="setState({currentPage: 'cart', menuOpen: false, categoryDropdownOpen: false})" class="relative group">
-                                <div class="glass-dark p-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-lg">
-                                    ${icons.ShoppingCart(26, 'text-amber-300 group-hover:text-amber-400')}
-                                    ${cartCount > 0 ? html`<span class="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-gray-900">${cartCount}</span>` : ''}
+                                <div class="glass-dark p-2 sm:p-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-lg">
+                                    ${icons.ShoppingCart(28, 'text-amber-300 group-hover:text-amber-400')}
+                                    ${cartCount > 0 ? html`<span class="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border-2 border-gray-900">${cartCount}</span>` : ''}
                                 </div>
                             </button>
                         ` : ''}
                         ${state.isLoggedIn ? html`
                             <div class="flex items-center gap-2">
-                                <div class="hidden md:block glass-dark p-3 rounded-xl shadow-lg">${icons.User(26, 'text-amber-300')}</div>
-                                <button class="hidden md:block text-amber-100 font-medium glass-dark px-4 py-3 rounded-xl hover:bg-amber-500/20 transition-all">
+                                <div class="glass-dark p-2 sm:p-3 rounded-xl shadow-lg">${icons.User(28, 'text-amber-300')}</div>
+                                <button class="text-amber-100 font-medium glass-dark px-3 sm:px-4 py-2 sm:py-3 rounded-xl hover:bg-amber-500/20 transition-all text-xs sm:text-sm whitespace-nowrap">
                                     ${isAdmin ? 'ADMIN' : 'MI CUENTA'}
                                 </button>
                             </div>
-                            <button onclick="logout()" class="glass-dark p-3 rounded-xl hover:bg-red-500/20 transition-all group shadow-lg">
-                                ${icons.LogOut(22, 'text-amber-300 group-hover:text-red-400')}
+                            <button onclick="logout()" class="glass-dark p-2 sm:p-3 rounded-xl hover:bg-red-500/20 transition-all group shadow-lg">
+                                ${icons.LogOut(26, 'text-amber-300 group-hover:text-red-400')}
                             </button>
                         ` : html`
                             <div class="flex items-center gap-2">
-                                <div onclick="setState({currentPage: 'login', categoryDropdownOpen: false})" class="hidden md:block glass-dark p-3 rounded-xl shadow-lg cursor-pointer hover:bg-amber-500/20 transition-all">
-                                    ${icons.User(26, 'text-amber-300')}
+                                <div onclick="setState({currentPage: 'login', categoryDropdownOpen: false})" class="glass-dark p-2 sm:p-3 rounded-xl shadow-lg cursor-pointer hover:bg-amber-500/20 transition-all">
+                                    ${icons.User(28, 'text-amber-300')}
                                 </div>
-                                <button onclick="setState({currentPage: 'login', categoryDropdownOpen: false})" class="gradient-gold text-gray-900 px-8 py-3 rounded-full font-bold shadow-2xl transition-all transform hover:scale-105 btn-premium">
+                                <button onclick="setState({currentPage: 'login', categoryDropdownOpen: false})" class="gradient-gold text-gray-900 px-4 sm:px-8 py-2 sm:py-3 rounded-full font-bold shadow-2xl transition-all transform hover:scale-105 btn-premium text-xs sm:text-sm whitespace-nowrap">
                                     INGRESAR
                                 </button>
                             </div>
                         `}
-                        <button class="lg:hidden glass-dark p-3 rounded-xl shadow-lg" onclick="setState({menuOpen: !state.menuOpen, categoryDropdownOpen: false})">
-                            ${state.menuOpen ? icons.X(26, 'text-amber-300') : icons.Menu(26, 'text-amber-300')}
+                        <button class="lg:hidden glass-dark p-2 sm:p-3 rounded-xl shadow-lg" onclick="setState({menuOpen: !state.menuOpen, categoryDropdownOpen: false})">
+                            ${state.menuOpen ? icons.X(28, 'text-amber-300') : icons.Menu(28, 'text-amber-300')}
                         </button>
                     </div>
                 </div>
                 ${state.menuOpen ? html`
                     <div class="lg:hidden pb-4 animate-fadeInUp">
                         <nav class="flex flex-col gap-2">
-                            ${CategoryDropdown(true)}
-                            <button onclick="setState({currentPage: 'about', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">NOSOTROS</button>
-                            <button onclick="setState({currentPage: 'location', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">UBICACIÓN</button>
-                            <button onclick="setState({currentPage: 'contact', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">CONTACTO</button>
+                            ${isAdmin ? html`
+                                <button onclick="setState({currentPage: 'admin', menuOpen: false})" class="text-red-400 hover:text-red-500 py-2 text-left font-bold">
+                                    PANEL ADMIN
+                                </button>
+                            ` : html`
+                                ${CategoryDropdown(true)}
+                                <button onclick="setState({currentPage: 'about', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">NOSOTROS</button>
+                                <button onclick="setState({currentPage: 'location', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">UBICACIÓN</button>
+                                <button onclick="setState({currentPage: 'contact', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">CONTACTO</button>
+                            `}
                         </nav>
                     </div>
                 ` : ''}
@@ -835,11 +934,12 @@ function AboutUsPage() {
                     </div>
                     
                     <div class="glass-dark p-6 rounded-2xl border border-amber-400/30 shadow-xl">
-                        <h2 class="text-3xl font-bold text-amber-300 mb-3">Nuestra Historia</h2>
-                        <p class="text-amber-200/80">
-                            Parfum nació en 2018 con la visión de elevar la experiencia de compra de fragancias en México. Lo que comenzó como un pequeño proyecto de curaduría de perfumes nicho, se ha convertido en una boutique digital líder, dedicada a conectar a nuestros clientes con las esencias más exclusivas del mundo.
-                        </p>
-                    </div>
+    <h2 class="text-3xl font-bold text-amber-300 mb-3">Nuestra Historia</h2>
+    <p class="text-amber-200/80 text-justify">
+        Parfum nació en 2018 con la visión de elevar la experiencia de compra de fragancias en México. Lo que comenzó como un pequeño proyecto de curaduría de perfumes nicho, se ha convertido en una boutique digital líder, dedicada a conectar a nuestros clientes con las esencias más exclusivas del mundo.
+    </p>
+</div>
+
                 </div>
 
                 <div class="space-y-8">
@@ -849,22 +949,24 @@ function AboutUsPage() {
                         <div class="glass-dark p-6 rounded-2xl border border-amber-400/30 hover:border-amber-400/60 transition-all card-luxury">
                             <div class="gradient-gold w-12 h-12 rounded-xl flex items-center justify-center mb-4">
                                 ${icons.Target(24, 'text-gray-900')}
-                            </div>
-                            <h3 class="text-xl font-bold text-amber-200 mb-2">Nuestra Misión</h3>
-                            <p class="text-amber-200/70 text-sm">
-                                Ser el puente de acceso a las fragancias más exclusivas del mercado, brindando un servicio personalizado y de primera clase.
-                            </p>
-                        </div>
+                           </div>
+    <h3 class="text-xl font-bold text-amber-200 mb-2">Nuestra Misión</h3>
+    <p class="text-amber-200/70 text-sm text-justify leading-relaxed">
+        Ser el puente de acceso a las fragancias más exclusivas del mercado, brindando un servicio personalizado y de primera clase.
+    </p>
+</div>
+
 
                         <div class="glass-dark p-6 rounded-2xl border border-amber-400/30 hover:border-amber-400/60 transition-all card-luxury">
                             <div class="gradient-gold w-12 h-12 rounded-xl flex items-center justify-center mb-4">
                                 ${icons.Eye(24, 'text-gray-900')}
-                            </div>
-                            <h3 class="text-xl font-bold text-amber-200 mb-2">Nuestra Visión</h3>
-                            <p class="text-amber-200/70 text-sm">
-                                Liderar el mercado de perfumes de lujo en Latinoamérica, expandiendo nuestra presencia con la misma esencia artesanal y trato personal.
-                            </p>
-                        </div>
+                           </div>
+    <h3 class="text-xl font-bold text-amber-200 mb-2">Nuestra Visión</h3>
+    <p class="text-amber-200/70 text-sm md:text-justify leading-relaxed">
+        Liderar el mercado de perfumes de lujo en Latinoamérica, expandiendo nuestra presencia con la misma esencia artesanal y trato personal.
+    </p>
+</div>
+
                     </div>
 
                     <div class="glass-dark p-6 rounded-2xl border border-amber-400/30 shadow-xl">
@@ -905,10 +1007,10 @@ function ContactPage() {
         <div class="container mx-auto px-4 py-16">
             <h1 class="text-5xl text-center font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-12">Contáctanos</h1>
             <div class="max-w-2xl mx-auto glass-dark p-8 rounded-3xl border border-amber-400/30">
-                <form onsubmit="handleContact(event)">
-                    <div class="mb-4"><label class="text-amber-300">Nombre</label><input id="contactName" class="w-full glass rounded p-2 text-white"/></div>
-                    <div class="mb-4"><label class="text-amber-300">Mensaje</label><textarea id="contactMessage" class="w-full glass rounded p-2 text-white"></textarea></div>
-                    <button class="gradient-gold px-6 py-2 rounded-full font-bold">Enviar</button>
+                <form id="contact-form" onsubmit="handleContact(event)">
+                    <div class="mb-4"><label class="text-amber-300 block mb-2">Nombre</label><input id="contactName" class="w-full glass rounded p-2 text-white" placeholder="Ingrese su nombre"/></div>
+                    <div class="mb-4"><label class="text-amber-300 block mb-2">Mensaje</label><textarea id="contactMessage" rows="5" class="w-full glass rounded p-2 text-white" placeholder="Escriba su mensaje"></textarea></div>
+                    <button type="submit" class="gradient-gold px-6 py-2 rounded-full font-bold hover:scale-105 transition">Enviar</button>
                 </form>
             </div>
         </div>
@@ -1187,17 +1289,52 @@ function AdminPage() {
                 </div>
 
                 <div class="space-y-8">
+                    ${state.editingUser ? html`
+                        <div class="glass-dark p-6 rounded-2xl border border-yellow-400/30">
+                            <h2 class="text-2xl text-yellow-400 mb-6 font-bold flex items-center gap-2">
+                                ${icons.Edit(24)} Editar Usuario: ${state.editingUser.name}
+                            </h2>
+                            <form id="edit-user-form" onsubmit="updateUser(event)" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-xs text-amber-200 uppercase font-bold block mb-1">Nombre</label>
+                                        <input type="text" name="editName" required class="w-full p-3 rounded-lg glass text-white placeholder-gray-400"/>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-amber-200 uppercase font-bold block mb-1">Email</label>
+                                        <input type="email" name="editEmail" required class="w-full p-3 rounded-lg glass text-white placeholder-gray-400"/>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-amber-200 uppercase font-bold block mb-1">Nueva Contraseña (opcional)</label>
+                                        <input type="password" name="editPassword" placeholder="Dejar en blanco para no cambiar" class="w-full p-3 rounded-lg glass text-white placeholder-gray-400"/>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-amber-200 uppercase font-bold block mb-1">Rol</label>
+                                        <select name="editRole" class="w-full p-3 rounded-lg bg-black/40 text-white border border-amber-400/20 outline-none" style="color: white; background-color: rgba(0,0,0,0.8);">
+                                            <option value="usuario" style="background-color: #1a1a2e; color: white;">Usuario</option>
+                                            <option value="admin" style="background-color: #1a1a2e; color: white;">Administrador</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="flex-1 gradient-gold text-gray-900 font-bold p-3 rounded-lg hover:scale-105 transition">Actualizar Usuario</button>
+                                    <button type="button" onclick="cancelEditUser()" class="px-6 py-3 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg hover:bg-red-500/40 transition font-bold">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    ` : ''}
+
                     <div class="glass-dark p-6 rounded-2xl border border-blue-400/30">
                         <h2 class="text-2xl text-blue-400 mb-6 font-bold flex items-center gap-2">
                             ${icons.User(24)} Clientes
                         </h2>
-                        <div class="overflow-x-auto max-h-64">
+                        <div id="clients-table-wrapper" class="overflow-x-auto max-h-64">
                             <table class="w-full text-left text-sm text-gray-300">
                                 <thead class="text-xs uppercase bg-blue-900/30 text-blue-300 sticky top-0">
                                     <tr>
                                         <th class="p-3">Nombre</th>
                                         <th class="p-3">Email</th>
-                                        <th class="p-3">Acción</th>
+                                        <th class="p-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-700">
@@ -1206,6 +1343,7 @@ function AdminPage() {
                                             <td class="p-3 font-medium text-white">${u.name}</td>
                                             <td class="p-3 text-gray-400">${u.email}</td>
                                             <td class="p-3 text-right">
+                                                <button onclick='editUser(${JSON.stringify(u)})' class="text-blue-400 hover:text-blue-300 hover:scale-110 transition mr-2">${icons.Edit(20)}</button>
                                                 <button onclick="deleteUser(${u.id})" class="text-red-400 hover:text-red-300 hover:scale-110 transition">${icons.Trash(20)}</button>
                                             </td>
                                         </tr>
@@ -1219,13 +1357,13 @@ function AdminPage() {
                         <h2 class="text-2xl text-purple-400 mb-6 font-bold flex items-center gap-2">
                             ${icons.User(24)} Administradores
                         </h2>
-                        <div class="overflow-x-auto max-h-64">
+                        <div id="admins-table-wrapper" class="overflow-x-auto max-h-64">
                             <table class="w-full text-left text-sm text-gray-300">
                                 <thead class="text-xs uppercase bg-purple-900/30 text-purple-300 sticky top-0">
                                     <tr>
                                         <th class="p-3">Nombre</th>
                                         <th class="p-3">Email</th>
-                                        <th class="p-3">Acción</th>
+                                        <th class="p-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-700">
@@ -1234,6 +1372,7 @@ function AdminPage() {
                                             <td class="p-3 font-medium text-white">${u.name}</td>
                                             <td class="p-3 text-gray-400">${u.email}</td>
                                             <td class="p-3 text-right">
+                                                <button onclick='editUser(${JSON.stringify(u)})' class="text-blue-400 hover:text-blue-300 hover:scale-110 transition mr-2">${icons.Edit(20)}</button>
                                                 <button onclick="deleteUser(${u.id})" class="text-red-400 hover:text-red-300 hover:scale-110 transition">${icons.Trash(20)}</button>
                                             </td>
                                         </tr>
@@ -1480,7 +1619,6 @@ function renderApp() {
 
     if (state.currentPage === 'home') startCarousel();
 }
-
 window.onload = function() { 
     checkSession();
     fetchProductsFromDB();
