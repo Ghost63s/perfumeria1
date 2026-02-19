@@ -962,10 +962,11 @@ function AboutUsPage() {
                                 ${icons.Eye(24, 'text-gray-900')}
                            </div>
     <h3 class="text-xl font-bold text-amber-200 mb-2">Nuestra Visión</h3>
-    <p class="text-amber-200/70 text-sm md:text-justify leading-relaxed">
-        Liderar el mercado de perfumes de lujo en Latinoamérica, expandiendo nuestra presencia con la misma esencia artesanal y trato personal.
-    </p>
+   <p class="text-amber-200/70 text-sm text-justify leading-relaxed">
+    Liderar el mercado de perfumes de lujo en Latinoamérica, expandiendo nuestra presencia con la misma esencia artesanal y trato personal.
+</p>
 </div>
+
 
                     </div>
 
