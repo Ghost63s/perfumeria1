@@ -190,7 +190,7 @@ app.post('/api/cart/add', async (req, res) => {
     }
 });
 
-//eliminar carrito
+//eliminar carrito dhdh
 
 app.post('/api/cart/update', async (req, res) => {
     const { userId, productId, quantity } = req.body;
