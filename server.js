@@ -164,7 +164,7 @@ app.get('/api/cart/:userId', async (req, res) => {
     }
 });
 
-//añadir al carrito
+//añadir al carrito hola
 
 app.post('/api/cart/add', async (req, res) => {
     const { userId, productId, quantity } = req.body;
