@@ -1,4 +1,4 @@
- require('dotenv').config();
+require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
@@ -53,6 +53,28 @@ app.get('/api/admin/sales', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener ventas' });
     }
+    // EDITAR USUARIO
+app.put('/api/admin/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, email, role } = req.body;
+
+    try {
+        const query = `
+            UPDATE usuarios
+            SET nombre = $1,
+                correo = $2,
+                rol = $3
+            WHERE id = $4
+        `;
+
+        await db.query(query, [name, email, role, id]);
+
+        res.json({ success: true, message: 'Usuario actualizado' });
+    } catch (error) {
+        console.error("Error al actualizar usuario:", error);
+        res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
+    }
+});
 });
 
 app.post('/api/login', async (req, res) => {
@@ -71,11 +93,14 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+//agregar usuario
+
+
 app.post('/api/register', async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const { rows: result } = await db.query(
-            'INSERT INTO usuarios (nombre, correo, contrasena_hash, rol) VALUES ($1, $2, $3, $4) RETURNING id',
+            'INSERT INTO usuarios  (nombre, correo, contrasena_hash, rol)  VALUES ($1, $2, $3, $4) RETURNING id',
             [name, email, password, 'usuario']
         );
         if (result[0]?.id) {
@@ -89,11 +114,13 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+//agregar admin
+
 app.post('/api/admin/create', async (req, res) => {
     const { name, email, password, role } = req.body;
     try {
         const { rows: result } = await db.query(
-            'INSERT INTO usuarios (nombre, correo, contrasena_hash, rol) VALUES ($1, $2, $3, $4)',
+          'INSERT INTO usuarios  (nombre, correo, contrasena_hash, rol) VALUES ($1, $2, $3, $4) ',
             [name, email, password, role || 'admin']
         );
         res.json({ success: true });
@@ -102,6 +129,9 @@ app.post('/api/admin/create', async (req, res) => {
         res.status(500).json({ success: false, message: 'Error al crear admin' });
     }
 });
+
+//eliminar usuarios
+
 
 app.delete('/api/admin/users/:id', async (req, res) => {
     const { id } = req.params;
@@ -134,6 +164,8 @@ app.get('/api/cart/:userId', async (req, res) => {
     }
 });
 
+//añadir al carrito
+
 app.post('/api/cart/add', async (req, res) => {
     const { userId, productId, quantity } = req.body;
     try {
@@ -157,6 +189,8 @@ app.post('/api/cart/add', async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
+
+//eliminar carrito
 
 app.post('/api/cart/update', async (req, res) => {
     const { userId, productId, quantity } = req.body;
@@ -189,6 +223,8 @@ app.post('/api/cart/remove', async (req, res) => {
         res.status(500).json({ success: false });
     }
 });
+
+//agreagar pedido y eliminar
 
 app.post('/api/checkout', async (req, res) => {
     const { userId, cart, total } = req.body;
@@ -262,6 +298,8 @@ app.get('/api/admin/catalogs', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener catálogos' });
     }
 });
+//agregar carrito
+
 
 app.post('/api/admin/products', async (req, res) => {
     const { name, price, stock, image, gender, type, rating } = req.body;
@@ -294,6 +332,9 @@ app.post('/api/admin/products', async (req, res) => {
     }
 });
 
+//actualizar producto
+
+
 app.put('/api/admin/products/:id', async (req, res) => {
     const { id } = req.params;
     const { name, price, stock, image, gender, type } = req.body;
@@ -317,6 +358,8 @@ app.put('/api/admin/products/:id', async (req, res) => {
         res.status(500).json({ success: false, message: 'Error al actualizar' });
     }
 });
+//borrar producto
+
 
 app.delete('/api/admin/products/:id', async (req, res) => {
     const { id } = req.params;
