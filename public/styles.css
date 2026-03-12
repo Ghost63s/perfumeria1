@@ -81,3 +81,196 @@ body {
 .admin-table td {
     background-color: rgba(0, 0, 0, 0.1);
 }
+
+
+
+
+
+
+
+
+/* BOTON DEL CHAT */
+
+.chat-button{
+position:fixed;
+bottom:50px;
+right:20px;
+background:#e7b308;
+color:rgba(238, 228, 228, 0.87);
+border:none;
+border-radius:50%;
+width:55px;
+height:55px;
+font-size:22px;
+cursor:pointer;
+box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* VENTANA DEL CHAT */
+
+.chat-container{
+position:fixed;
+bottom:110px;
+right:20px;
+width:320px;
+background:white;
+border-radius:12px;
+box-shadow:0 6px 25px rgba(0,0,0,0.3);
+display:none;
+flex-direction:column;
+overflow:hidden;
+font-family:Arial;
+}
+
+/* ENCABEZADO */
+
+.chat-header{
+background:#e7b308;
+color:white;
+padding:12px;
+font-weight:bold;
+}
+
+.close-chat{
+float:right;
+cursor:pointer;
+}
+
+/* MENSAJES */
+
+.chat-messages{
+height:260px;
+padding:10px;
+overflow-y:auto;
+background:#f7f7f7;
+font-size:14px;
+}
+
+/* MENSAJE BOT */
+
+.bot{
+background:#e5e5e5;
+padding:8px;
+border-radius:8px;
+margin:5px 0;
+max-width:80%;
+}
+
+/* MENSAJE USUARIO */
+
+.user{
+background:black;
+color:white;
+padding:8px;
+border-radius:8px;
+margin:5px 0;
+margin-left:auto;
+max-width:80%;
+}
+
+/* INPUT */
+
+.chat-input{
+display:flex;
+border-top:1px solid #ddd;
+}
+
+.chat-input input{
+flex:1;
+border:none;
+padding:10px;
+outline:none;
+}
+
+/* BOTON ENVIAR */
+
+.chat-input button{
+background:#000113e1;
+color:white;
+border:none;
+padding:10px 15px;
+cursor:pointer;
+}
+
+/* BOTONES RÁPIDOS */
+
+.quick-buttons{
+margin-top:8px;
+}
+
+.quick-buttons button{
+margin:4px;
+padding:6px 10px;
+border:none;
+background:#e7b308;
+color:white;
+border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+}
+.quick-buttons button:hover{
+background:#c59d5f;
+}
+
+/* TEXTO "ESCRIBIENDO" */
+
+.typing{
+display:none;
+font-size:12px;
+color:#666;
+padding:5px 10px;
+font-style:italic;
+}
+
+/* LINK GOOGLE MAPS */
+
+.map-link{
+color:#007BFF;
+text-decoration:underline;
+font-weight:bold;
+}
+
+.map-link:hover{
+color:#0300b3;
+}
+
+
+/* LINK CATALOGO */
+
+.catalogo-link{
+color:#e7b308;
+text-decoration:underline;
+font-weight:bold;
+}
+
+.catalogo-link:hover{
+color:#c59d5f;
+}
+
+
+/* LINK REDES SOCIALES */
+.social-link{
+color:#e7b308;
+text-decoration:underline;
+font-weight:bold;
+}
+
+.social-link:hover{
+color:#c59d5f;
+}
+
+
+
+/* LINK CORREO */
+.mail-link{
+color:#e7b308;
+text-decoration:underline;
+font-weight:bold;
+}
+
+.mail-link:hover{
+color:#c59d5f;
+}
+
+
+

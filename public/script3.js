@@ -881,6 +881,8 @@ function CatalogPage() {
                 ${filteredProducts.map(ProductCard).join('')}
             </div>
         </div>
+
+        
     `;
 }
 
@@ -1038,6 +1040,7 @@ function renderAdminProductList(products) {
                 </button>
             </div>
         </div>
+        
     `).join('');
 }
 
@@ -1585,6 +1588,7 @@ function TicketPage() {
                 </button>
             </div>
         </div>
+        
     `;
 }
 

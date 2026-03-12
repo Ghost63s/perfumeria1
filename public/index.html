@@ -9,8 +9,49 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    
     <div id="app-container"></div>
 
     <script src="script3.js"></script>
+
+
+
+
+
+
+
+<!-- BOTÓN FLOTANTE -->
+<button class="chat-button" onclick="toggleChat()">💬</button>
+
+<!-- CHATBOT -->
+<div class="chat-container" id="chatbox">
+
+  <div class="chat-header">
+    Asistente de Perfumería
+    <span class="close-chat" onclick="toggleChat()">✖</span>
+  </div>
+
+  <div class="chat-messages" id="messages">
+    <div class="bot">Hola 👋 Bienvenido. ¿En qué puedo ayudarte?</div>
+
+    <div class="quick-buttons">
+      <button onclick="quickQuestion('precio')">Precios</button>
+      <button onclick="quickQuestion('promociones')">Promociones</button>
+      <button onclick="quickQuestion('ubicacion')">Ubicación</button>
+      <button onclick="quickQuestion('horario')">Horario</button>
+    </div>
+
+  </div>
+
+  <div class="typing" id="typing">El asistente está escribiendo...</div>
+
+  <div class="chat-input">
+    <input id="input" placeholder="Escribe tu mensaje...">
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+
+<script src="chatbot.js"> </script>
+
+
 </body>
 </html>
