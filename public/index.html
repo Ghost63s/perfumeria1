@@ -20,8 +20,37 @@
 
 
 
-<!-- BOTÓN FLOTANTE -->
-<button class="chat-button" onclick="toggleChat()">💬</button>
+<!-- CONTENEDOR DE BOTONES FLOTANTES -->
+<div class="floating-buttons-container">
+  <!-- BOTÓN DE CONFIGURACIÓN -->
+  <button class="config-button" onclick="toggleConfig()">⚙️</button>
+
+  <!-- PANEL DE CONFIGURACIÓN -->
+  <div class="config-container" id="configbox">
+    <div class="config-header">
+      Configuración
+      <span class="close-config" onclick="toggleConfig()">✖</span>
+    </div>
+    <div class="config-content">
+      <div class="config-option">
+        <label for="darkmode-toggle">
+          <input type="checkbox" id="darkmode-toggle" onchange="toggleDarkMode()">
+          Modo Nocturno
+        </label>
+      </div>
+
+      <div class="config-option">
+        <label for="font-size-slider">
+          Tamaño de Texto: <span id="font-size-value">100%</span>
+        </label>
+        <input type="range" id="font-size-slider" min="100" max="200" value="100" onchange="changeFontSize()" class="font-slider">
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÓN FLOTANTE -->
+  <button class="chat-button" onclick="toggleChat()">💬</button>
+</div>
 
 <!-- CHATBOT -->
 <div class="chat-container" id="chatbox">
@@ -50,8 +79,8 @@
     <button onclick="sendMessage()">Enviar</button>
   </div>
 
-<script src="chatbot.js"> </script>
-
+<script src="chatbot.js"></script>
+<script src="config.js"></script>
 
 </body>
 </html>

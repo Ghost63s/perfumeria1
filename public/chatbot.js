@@ -1,9 +1,8 @@
 function toggleChat(){
 
 let chat=document.getElementById("chatbox");
+let config=document.getElementById("configbox");
 let messages=document.getElementById("messages");
-
-
 
 if(chat.style.display==="flex"){
 
@@ -21,6 +20,8 @@ messages.innerHTML='<div class="bot">Hola 👋 Bienvenido a nuestra perfumería 
 
 }else{
 chat.style.display="flex";
+// Cerrar configuración si está abierta
+config.style.display="none";
 }
 
 }
