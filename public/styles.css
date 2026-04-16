@@ -256,7 +256,7 @@ header.glass [class*="items-center"] {
     flex-direction:column;
     overflow:hidden;
     font-family:Arial;
-    z-index:999;
+    z-index:1000;
 }
 
 /* ENCABEZADO */
@@ -641,4 +641,64 @@ color:#1a1a2e;
 
 body.dark-mode .quick-buttons button:hover{
 background:#c59d5f;
+}
+
+/* ACCESIBILIDAD: Estilos de focus para navegación con teclado */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+select:focus-visible {
+    outline: 3px solid #f9d423;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(249, 212, 35, 0.25);
+}
+
+/* Mejorar visibilidad en contraste */
+button:focus,
+input:focus,
+textarea:focus,
+a:focus,
+select:focus {
+    outline: 3px solid #f9d423;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(249, 212, 35, 0.25);
+}
+
+/* Focus en botones especiales */
+.config-button:focus-visible,
+.chat-button:focus-visible {
+    transform: scale(1.1);
+}
+
+/* Focus en elementos del menú */
+header.glass a:focus-visible,
+header.glass button:focus-visible {
+    background-color: rgba(249, 212, 35, 0.15);
+}
+
+/* Estilos para inputs con mejor contraste */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+    font-size: 16px; /* Prevenir zoom automático en móviles */
+}
+
+/* Asegurar suficiente contraste en modo oscuro */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #0f172a;
+        color: #e0e0e0;
+    }
+}
+
+/* Mejorar contraste en inputs enfocados */
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #f9d423 !important;
+    background-color: rgba(249, 212, 35, 0.05);
 }

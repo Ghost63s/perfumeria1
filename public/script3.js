@@ -68,6 +68,29 @@ function isSafariBrowser() {
     }
 }
 
+// Función auxiliar para extraer nombre del perfume de la ruta del archivo
+function getFragranceNameFromPath(imagePath) {
+    if (!imagePath) return 'Fragancia';
+    
+    // Extraer el nombre del archivo sin extensión
+    const fileName = imagePath.split('/').pop().split('.')[0];
+    
+    // Convertir nombres conocidos a títulos descriptivos
+    const fragranceNames = {
+        'aventus': 'Aventus',
+        'bleu': 'Bleu',
+        'Allure': 'Allure',
+        'eternity': 'Eternity',
+        'guilty': 'Guilty',
+        'invictus': 'Invictus',
+        'L1212': 'Lacoste L.12.12',
+        'savage': 'Savage',
+        'tomfordm': 'Tom Ford'
+    };
+    
+    return fragranceNames[fileName] || fileName;
+}
+
 function html(strings, ...values) {
     let result = strings[0];
     for (let i = 0; i < values.length; i++) {
@@ -310,14 +333,33 @@ async function deleteUser(id) {
     }
 }
 
+// CARRUSEL DE IMÁGENES - Actualización sin re-renderizar
 function startCarousel() {
+    // Limpia cualquier intervalo anterior (evita múltiples carruseles)
     clearInterval(carouselInterval);
+    
+    // Crea un nuevo intervalo que se ejecuta cada 4.5 segundos (4500ms)
     carouselInterval = setInterval(() => {
+        // Define qué imágenes mostrar según la página actual
         const currentImages = state.currentPage === 'admin' ? 
             ['ParfumH/savage.jpg', 'ParfumH/eros.jpg', 'ParfumH/explorer.jpg', 'ParfumH/bleu.jpg', 'ParfumH/aventus.jpg'] : 
             state.carouselImages;
-        setState({ carouselIndex: (state.carouselIndex + 1) % currentImages.length });
-    }, 4500);
+        
+        // IMPORTANTE: Cambiar el índice SIN usar setState()
+        // Esto evita que se re-renderice toda la página
+        // Simplemente incrementamos el índice (y volvemos a 0 al llegar al final)
+        state.carouselIndex = (state.carouselIndex + 1) % currentImages.length;
+        
+        // Actualizar SOLO la imagen del carrusel en el HTML
+        // Buscamos el elemento <img> dentro del carrusel
+        const carouselImg = document.querySelector('#carousel img');
+        if (carouselImg) {
+            // Cambiar la fuente (src) de la imagen a la siguiente
+            carouselImg.src = currentImages[state.carouselIndex];
+            // También actualizar el texto alternativo (alt) para accesibilidad
+            carouselImg.alt = getFragranceNameFromPath(currentImages[state.carouselIndex]) + ' - Fragancia de lujo destacada';
+        }
+    }, 4500); // 4500ms = 4.5 segundos
 }
 
 function setCategoryFilter(categoryKey) {
@@ -534,7 +576,7 @@ function NotificationBanner() {
         <div id="notification-banner" class="notification-banner fixed top-0 left-1/2 transform -translate-x-1/2 mt-4 p-3 rounded-xl shadow-2xl z-[100] 
             ${state.error.includes('❌') || state.error.includes('🚨') || state.error.includes('⚠️') || state.error.includes('🗑️') || state.error.includes('🔒') ? 'bg-red-700' : 'bg-green-600'} 
             text-white font-semibold flex items-center gap-3 border border-white/20">
-            <button class="text-xl" onclick="setState({error: null})">${icons.X(18, 'text-white')}</button>
+            <button class="text-xl" onclick="setState({error: null})" aria-label="Cerrar mensaje de error">${icons.X(18, 'text-white')}</button>
             ${state.error}
         </div>
     `;
@@ -551,30 +593,17 @@ function CategoryDropdown(isMobile = false) {
     
     const activeCategory = categories.find(cat => cat.key === state.currentCategory) || categories[0];
 
-    const containerClasses = isMobile ? 'w-full' : 'relative';
     const buttonClasses = isMobile 
         ? 'flex items-center justify-between w-full text-amber-200 hover:text-amber-400 py-2 text-left font-semibold tracking-wide'
         : 'flex items-center text-amber-200 hover:text-amber-400 transition-all font-semibold tracking-wide';
-    
-    const dropdownClasses = isMobile
-        ? 'mt-2 w-full glass-dark rounded-xl shadow-2xl border border-amber-400/30 overflow-hidden z-50 animate-fadeInUp'
-        : 'absolute left-1/2 transform -translate-x-1/2 mt-3 w-56 glass-dark rounded-xl shadow-2xl border border-amber-400/30 overflow-hidden z-50 animate-fadeInUp';
 
     return html`
-        <div class="${containerClasses}">
-            <button onclick="setState({categoryDropdownOpen: !state.categoryDropdownOpen})" 
-                    class="${buttonClasses}">
-                ${activeCategory.name.toUpperCase()} ${icons.ChevronDown(18, 'ml-1 transition-transform ' + (state.categoryDropdownOpen ? 'rotate-180' : ''))}
-            </button>
-            ${state.categoryDropdownOpen ? html`
-                <div class="${dropdownClasses}">
-                    ${categories.map(cat => html`
-                        <a href="#" onclick="setCategoryFilter('${cat.key}')"
-                           class="block px-4 py-3 text-sm text-amber-200 ${cat.key === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">${cat.name}</a>
-                    `).join('')}
-                </div>
-            ` : ''}
-        </div>
+        <button onclick="setState({categoryDropdownOpen: !state.categoryDropdownOpen})" 
+                aria-haspopup="true" 
+                aria-expanded="${state.categoryDropdownOpen}"
+                class="${buttonClasses}">
+            ${activeCategory.name.toUpperCase()} ${icons.ChevronDown(18, 'ml-1 transition-transform ' + (state.categoryDropdownOpen ? 'rotate-180' : ''))}
+        </button>
     `;
 }
 
@@ -609,18 +638,18 @@ function Navbar() {
                     <!-- Navegación desktop -->
                     <nav class="hidden lg:flex items-center gap-8 text-sm font-semibold tracking-wide">
                         ${isAdmin ? AdminNavbarDropdown() : html`
-                            <button onclick="setCategoryFilter('all')" class="text-amber-200 hover:text-amber-400 transition-all">CATÁLOGO</button>
+                            <button onclick="setCategoryFilter('all')" aria-label="Ver catálogo de fragancias" class="text-amber-200 hover:text-amber-400 transition-all">CATÁLOGO</button>
                             ${CategoryDropdown()}
-                            <button onclick="setState({currentPage: 'about', categoryDropdownOpen: false})" class="text-amber-200 hover:text-amber-400 transition-all">NOSOTROS</button>
-                            <button onclick="setState({currentPage: 'location', categoryDropdownOpen: false})" class="text-amber-200 hover:text-amber-400 transition-all">UBICACIÓN</button>
-                            <button onclick="setState({currentPage: 'contact', categoryDropdownOpen: false})" class="text-amber-200 hover:text-amber-400 transition-all">CONTACTO</button>
+                            <button onclick="setState({currentPage: 'about', categoryDropdownOpen: false})" aria-label="Conocer sobre Parfum" class="text-amber-200 hover:text-amber-400 transition-all">NOSOTROS</button>
+                            <button onclick="setState({currentPage: 'location', categoryDropdownOpen: false})" aria-label="Ver ubicación de la tienda" class="text-amber-200 hover:text-amber-400 transition-all">UBICACIÓN</button>
+                            <button onclick="setState({currentPage: 'contact', categoryDropdownOpen: false})" aria-label="Ponerse en contacto con nosotros" class="text-amber-200 hover:text-amber-400 transition-all">CONTACTO</button>
                         `}
                     </nav>
 
                     <!-- Botones responsive -->
                     <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2 sm:gap-3">
                         ${!isAdmin ? html`
-                            <button onclick="setState({currentPage: 'cart', menuOpen: false, categoryDropdownOpen: false})" class="relative group">
+                            <button onclick="setState({currentPage: 'cart', menuOpen: false, categoryDropdownOpen: false})" aria-label="Ver carrito de compras${cartCount > 0 ? ', ' + cartCount + ' artículos' : ''} " class="relative group">
                                 <div class="glass-dark p-2 sm:p-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-lg">
                                     ${icons.ShoppingCart(28, 'text-amber-300 group-hover:text-amber-400')}
                                     ${cartCount > 0 ? html`<span class="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border-2 border-gray-900">${cartCount}</span>` : ''}
@@ -634,7 +663,7 @@ function Navbar() {
                                     ${isAdmin ? 'ADMIN' : 'MI CUENTA'}
                                 </button>
                             </div>
-                            <button onclick="logout()" class="glass-dark p-2 sm:p-3 rounded-xl hover:bg-red-500/20 transition-all group shadow-lg">
+                            <button onclick="logout()" class="glass-dark p-2 sm:p-3 rounded-xl hover:bg-red-500/20 transition-all group shadow-lg" aria-label="Cerrar sesión">
                                 ${icons.LogOut(26, 'text-amber-300 group-hover:text-red-400')}
                             </button>
                         ` : html`
@@ -647,7 +676,7 @@ function Navbar() {
                                 </button>
                             </div>
                         `}
-                        <button class="lg:hidden glass-dark p-2 sm:p-3 rounded-xl shadow-lg" onclick="setState({menuOpen: !state.menuOpen, categoryDropdownOpen: false})">
+                        <button class="lg:hidden glass-dark p-2 sm:p-3 rounded-xl shadow-lg" onclick="setState({menuOpen: !state.menuOpen, categoryDropdownOpen: false})" aria-expanded="${state.menuOpen}" aria-label="Menú de navegación">
                             ${state.menuOpen ? icons.X(28, 'text-amber-300') : icons.Menu(28, 'text-amber-300')}
                         </button>
                     </div>
@@ -661,9 +690,9 @@ function Navbar() {
                                 </button>
                             ` : html`
                                 ${CategoryDropdown(true)}
-                                <button onclick="setState({currentPage: 'about', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">NOSOTROS</button>
-                                <button onclick="setState({currentPage: 'location', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">UBICACIÓN</button>
-                                <button onclick="setState({currentPage: 'contact', menuOpen: false})" class="text-amber-200 hover:text-amber-400 py-2 text-left">CONTACTO</button>
+                                <button onclick="setState({currentPage: 'about', menuOpen: false})" aria-label="Conocer sobre Parfum" class="text-amber-200 hover:text-amber-400 py-2 text-left">NOSOTROS</button>
+                                <button onclick="setState({currentPage: 'location', menuOpen: false})" aria-label="Ver ubicación de la tienda" class="text-amber-200 hover:text-amber-400 py-2 text-left">UBICACIÓN</button>
+                                <button onclick="setState({currentPage: 'contact', menuOpen: false})" aria-label="Ponerse en contacto con nosotros" class="text-amber-200 hover:text-amber-400 py-2 text-left">CONTACTO</button>
                             `}
                         </nav>
                     </div>
@@ -699,28 +728,28 @@ function Footer() {
                     <div class="col-span-2 md:col-span-1">
                         <h4 class="text-amber-400 font-semibold mb-4">Contáctanos</h4>
                         <ul class="space-y-3 text-sm text-amber-200/70">
-                            <li class="flex items-center gap-3">${icons.MapPin(18, 'text-amber-400')} Av. Reforma 123, CDMX</li>
-                            <li class="flex items-center gap-3">${icons.Phone(18, 'text-amber-400')} +52 55 1234 5678</li>
-                            <li class="flex items-center gap-3">${icons.Mail(18, 'text-amber-400')} info@parfum.com</li>
+                            <li class="flex items-center gap-3" aria-label="Dirección: Avenida Reforma 123, Ciudad de México">${icons.MapPin(18, 'text-amber-400')} Av. Reforma 123, CDMX</li>
+                            <li class="flex items-center gap-3" aria-label="Teléfono: Más 52 55 1234 5678">${icons.Phone(18, 'text-amber-400')} +52 55 1234 5678</li>
+                            <li class="flex items-center gap-3" aria-label="Correo electrónico: info en parfum.com">${icons.Mail(18, 'text-amber-400')} info@parfum.com</li>
                         </ul>
                     </div>
                     
                     <div class="col-span-2 md:col-span-2">
                          <h4 class="text-amber-400 font-semibold mb-4">Horario</h4>
                          <ul class="space-y-3 text-sm text-amber-200/70 mb-6">
-                            <li class="flex items-center gap-3">${icons.Clock(18, 'text-amber-400')} Lunes a Viernes: 10:00 - 20:00</li>
-                            <li class="flex items-center gap-3">${icons.Clock(18, 'text-amber-400')} Sábado: 11:00 - 18:00</li>
+                            <li class="flex items-center gap-3" aria-label="Lunes a viernes, 10 de la mañana a 8 de la noche">${icons.Clock(18, 'text-amber-400')} Lunes a Viernes: 10:00 - 20:00</li>
+                            <li class="flex items-center gap-3" aria-label="Sábado, 11 de la mañana a 6 de la noche">${icons.Clock(18, 'text-amber-400')} Sábado: 11:00 - 18:00</li>
                         </ul>
 
                         <h4 class="text-amber-400 font-semibold mb-4">Síguenos</h4>
                         <div class="flex gap-4">
-                            <a href="https://www.instagram.com/luxury_fragrances7?igsh=MWg1NDQ2N2pxcmVtZA==" class="group glass p-2 rounded-xl hover:bg-gradient-to-br from-purple-500 to-pink-500 transition-all" target="_blank">
+                            <a href="https://www.instagram.com/luxury_fragrances7?igsh=MWg1NDQ2N2pxcmVtZA==" class="group glass p-2 rounded-xl hover:bg-gradient-to-br from-purple-500 to-pink-500 transition-all" target="_blank" aria-label="Síguenos en Instagram">
                                 ${icons.Instagram(24, 'text-amber-300 group-hover:text-white')}
                             </a>
-                            <a href="https://www.facebook.com/frasesdeWinniePooh" class="group glass p-2 rounded-xl hover:bg-gradient-to-r from-blue-500 to-blue-600 transition-all" target="_blank">
+                            <a href="https://www.facebook.com/frasesdeWinniePooh" class="group glass p-2 rounded-xl hover:bg-gradient-to-r from-blue-500 to-blue-600 transition-all" target="_blank" aria-label="Síguenos en Facebook">
                                 ${icons.Facebook(24, 'text-amber-300 group-hover:text-white')}
                             </a>
-                            <a href="https://x.com/LUXURYFRAGANC" class="group glass p-2 rounded-xl hover:bg-gradient-to-r from-sky-400 to-sky-500 transition-all" target="_blank">
+                            <a href="https://x.com/LUXURYFRAGANC" class="group glass p-2 rounded-xl hover:bg-gradient-to-r from-sky-400 to-sky-500 transition-all" target="_blank" aria-label="Síguenos en X (Twitter)">
                                 ${icons['Twitter'](24, 'text-amber-300 group-hover:text-white')}
                             </a>
                         </div>
@@ -735,13 +764,18 @@ function Footer() {
 }
 
 function HomePage() {
+    // Narrar el título si el narrador está habilitado
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        setTimeout(() => speakText("Bienvenido a Parfum. Sumérgete en el mundo de las fragancias de lujo."), 300);
+    }
+    
     return html`
         <div class="container mx-auto px-4 py-16 text-center">
             <h1 class="text-6xl font-display font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">Bienvenido a Parfum</h1>
             <p class="text-xl text-amber-200/80 mt-4 max-w-3xl mx-auto">Sumérgete en el mundo de las fragancias de lujo.</p>
             <div id="carousel" class="mt-12">
                 <div class="glass-dark rounded-3xl overflow-hidden border border-amber-400/30 h-96 flex items-center justify-center">
-                    <img src="${state.carouselImages[state.carouselIndex]}" alt="Carousel Image" class="w-full h-full object-cover opacity-80 transition-opacity duration-1000"/>
+                    <img src="${state.carouselImages[state.carouselIndex]}" alt="${getFragranceNameFromPath(state.carouselImages[state.carouselIndex])} - Fragancia de lujo destacada" class="w-full h-full object-cover opacity-80 transition-opacity duration-1000"/>
                 </div>
             </div>
             <button onclick="setCategoryFilter('all')" class="mt-12 gradient-gold text-gray-900 px-10 py-4 rounded-full font-bold shadow-2xl transition-all transform hover:scale-105 btn-premium text-xl">
@@ -755,7 +789,7 @@ function LoginPage() {
     return html`
         <div class="flex items-center justify-center min-h-screen bg-gray-900/90 py-12">
         <div class="relative glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-md animate-fadeInUp">
-                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm">
+                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm" aria-label="Regresar a la página anterior">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     Regresar
                 </button>
@@ -764,16 +798,16 @@ function LoginPage() {
                 <form id="login-form" onsubmit="handleLogin(event)">
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Correo</label>
-                        <input type="email" name="username" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="ejemplo@correo.com"/>
+                        <input type="email" name="username" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="ejemplo@correo.com" aria-label="Campo de correo electrónico. Ingresa tu correo para iniciar sesión"/>
                     </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="••••••"/>
+                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="••••••" aria-label="Campo de contraseña. Ingresa tu contraseña para iniciar sesión"/>
                     </div>
-                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg">ACCEDER</button>
+                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg" aria-label="Botón para acceder a tu cuenta">ACCEDER</button>
                 </form>
                 <p class="text-center text-amber-200/70 mt-6">
-                    ¿No tienes cuenta? <button onclick="setState({currentPage: 'register'})" class="text-amber-400 font-bold hover:underline">Regístrate</button>
+                    ¿No tienes cuenta? <button onclick="setState({currentPage: 'register'})" class="text-amber-400 font-bold hover:underline" aria-label="Ir a la página de registro">Regístrate</button>
                 </p>
             </div>
         </div>
@@ -784,7 +818,7 @@ function RegisterPage() {
     return html`
         <div class="flex items-center justify-center min-h-screen bg-gray-900/90 py-12">
            <div class="relative glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-lg animate-fadeInUp">
-                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm">
+                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm" aria-label="Regresar a la página anterior">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     Regresar
                 </button>
@@ -792,24 +826,24 @@ function RegisterPage() {
                 <form id="register-form" onsubmit="handleRegister(event)">
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Nombre</label>
-                        <input type="text" name="name" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30"/>
+                        <input type="text" name="name" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" aria-label="Campo de nombre. Ingresa tu nombre completo"/>
                     </div>
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Email</label>
-                        <input type="email" name="email" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30"/>
+                        <input type="email" name="email" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" aria-label="Campo de correo electrónico. Ingresa un correo válido para tu cuenta"/>
                     </div>
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30"/>
+                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" aria-label="Campo de contraseña. Ingresa una contraseña segura"/>
                     </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Confirmar</label>
-                        <input type="password" name="confirmPassword" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30"/>
+                        <input type="password" name="confirmPassword" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" aria-label="Campo de confirmación de contraseña. Ingresa la misma contraseña nuevamente"/>
                     </div>
-                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg">REGISTRARSE</button>
+                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg" aria-label="Botón para crear tu nueva cuenta">REGISTRARSE</button>
                 </form>
                 <p class="text-center text-amber-200/70 mt-6">
-                    ¿Ya tienes cuenta? <button onclick="setState({currentPage: 'login'})" class="text-amber-400 font-bold hover:underline">Ingresa</button>
+                    ¿Ya tienes cuenta? <button onclick="setState({currentPage: 'login'})" class="text-amber-400 font-bold hover:underline" aria-label="Ir a la página de inicio de sesión">Ingresa</button>
                 </p>
             </div>
         </div>
@@ -831,20 +865,24 @@ function ProductCard(product) {
     const buttonText = state.isLoggedIn ? 'Añadir al Carrito' : 'Iniciar Sesión';
     const buttonClasses = state.isLoggedIn ? 'gradient-gold hover:ring-2 hover:ring-yellow-400' : 'bg-red-500 hover:bg-red-600 text-white';
     
+    // Crear descripción del producto para la narración
+    const productDescription = `${product.name}. Precio: ${product.price.toLocaleString('es-MX')} pesos. Género: ${product.gender === 'hombre' ? 'Para hombre' : product.gender === 'mujer' ? 'Para mujer' : 'Unisex'}. Calificación: ${product.rating.toFixed(1)} de 5 estrellas.`;
+    
     return html`
-        <div class="glass-dark rounded-2xl p-6 shadow-2xl border border-amber-400/30 flex flex-col transform hover:scale-[1.02] transition-all duration-300">
+        <div class="glass-dark rounded-2xl p-6 shadow-2xl border border-amber-400/30 flex flex-col transform hover:scale-[1.02] transition-all duration-300" aria-label="${productDescription}">
             <div class="relative mb-4">
-                <img src="${product.image}" alt="${product.name}" class="w-full h-56 object-cover rounded-xl shadow-lg"/>
-                ${product.badge ? html`<span class="absolute top-3 right-3 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-md">${product.badge}</span>` : ''}
+                <img src="${product.image}" alt="${product.name} - Fragancia de lujo ${product.gender === 'hombre' ? 'para hombre' : product.gender === 'mujer' ? 'para mujer' : 'unisex'}" class="w-full h-56 object-cover rounded-xl shadow-lg"/>
+                ${product.badge ? html`<span class="absolute top-3 right-3 bg-yellow-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-md" aria-label="Oferta especial: ${product.badge}">${product.badge}</span>` : ''}
             </div>
             <h3 class="text-xl font-bold text-amber-200">${product.name}</h3>
             <p class="text-amber-300 font-semibold text-lg mt-1">$${product.price.toLocaleString('es-MX')}</p>
             <div class="flex items-center mt-2 mb-4">
                 ${starIcons}
-                <span class="text-sm text-amber-200/70 ml-2">(${product.rating.toFixed(1)})</span>
+                <span class="text-sm text-amber-200/70 ml-2" aria-label="Calificación: ${product.rating.toFixed(1)} estrellas">(${product.rating.toFixed(1)})</span>
             </div>
             <button onclick="${buttonAction}" 
-                    class="mt-auto w-full text-gray-900 px-4 py-3 rounded-full font-bold shadow-md transition-all flex items-center justify-center gap-2 ${buttonClasses}">
+                    class="mt-auto w-full text-gray-900 px-4 py-3 rounded-full font-bold shadow-md transition-all flex items-center justify-center gap-2 ${buttonClasses}"
+                    aria-label="${buttonText} para ${product.name}">
                 ${buttonIcon} ${buttonText}
             </button>
         </div>
@@ -872,6 +910,11 @@ function CatalogPage() {
         default: break;
     }
 
+    // Narrar el título del catálogo
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        setTimeout(() => speakText(`${title}. Mostrando ${filteredProducts.length} fragancias.`), 300);
+    }
+
     return html`
         <div class="container mx-auto px-4 py-16">
             <div class="text-center mb-12">
@@ -888,6 +931,16 @@ function CatalogPage() {
 
 function CartPage() {
     const subtotal = state.cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    
+    // Narrar información del carrito
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        if (state.cart.length === 0) {
+            setTimeout(() => speakText("Tu carrito está vacío."), 300);
+        } else {
+            setTimeout(() => speakText(`Tu carrito tiene ${state.cart.length} artículos. Total: $${subtotal.toLocaleString('es-MX')}`), 300);
+        }
+    }
+    
     return html`
         <div class="container mx-auto px-4 py-16">
             <h1 class="text-5xl font-display font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-12">Tu Carrito</h1>
@@ -897,19 +950,19 @@ function CartPage() {
                     ${state.cart.map(item => html`
                         <div class="glass-dark p-6 rounded-2xl flex items-center justify-between gap-6 border border-amber-400/30">
                             <div class="flex items-center gap-6">
-                                <img src="${item.image}" class="w-20 h-20 object-cover rounded-xl"/>
+                                <img src="${item.image}" alt="${item.name} - Artículo en el carrito de compras" class="w-20 h-20 object-cover rounded-xl"/>
                                 <div><h3 class="text-amber-200 font-bold">${item.name}</h3><p class="text-amber-300">$${item.price.toLocaleString('es-MX')}</p></div>
                             </div>
                             <div class="flex items-center gap-4">
                                 <input type="number" value="${item.quantity}" onchange="updateQuantity(${item.id}, this.value)" class="w-16 px-2 py-1 glass text-white rounded"/>
-                                <button onclick="removeFromCart(${item.id})" class="text-red-400">${icons.Trash(24)}</button>
+                                <button onclick="removeFromCart(${item.id})" class="text-red-400" aria-label="Eliminar ${item.name} del carrito">${icons.Trash(24)}</button>
                             </div>
                         </div>
                     `).join('')}
                 </div>
                 <div class="glass-dark p-8 rounded-3xl border border-amber-400/30 h-fit">
                     <h2 class="text-2xl text-amber-300 mb-4">Total: $${subtotal.toLocaleString('es-MX')}</h2>
-                    <button onclick="checkout()" class="w-full gradient-gold text-gray-900 px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform">PAGAR</button>
+                    <button onclick="checkout()" class="w-full gradient-gold text-gray-900 px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform" aria-label="Proceder al pago">PAGAR</button>
                 </div>
             </div>`}
         </div>
@@ -924,6 +977,11 @@ function AboutUsPage() {
         { name: 'Autenticidad', icon: icons.Sparkles(20) },
     ];
 
+    // Narrar información sobre la empresa
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        setTimeout(() => speakText("Quiénes Somos. Parfum es una boutique de fragancias de lujo fundada en 2018."), 300);
+    }
+
     return html`
         <div class="container mx-auto px-4 py-16">
             <h1 class="text-5xl text-center font-display font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-12">Quiénes Somos</h1>
@@ -932,7 +990,7 @@ function AboutUsPage() {
                 
                 <div class="space-y-8">
                     <div class="glass-dark p-4 rounded-3xl border border-amber-400/30 shadow-2xl">
-                        <img src="corporativo.png" alt="Equipo de Parfum" class="w-full h-auto max-h-[500px] object-cover rounded-2xl opacity-90"/>
+                        <img src="corporativo.png" alt="Equipo profesional de Parfum - Boutique de fragancias de lujo desde 2018" class="w-full h-auto max-h-[500px] object-cover rounded-2xl opacity-90"/>
                     </div>
                     
                     <div class="glass-dark p-6 rounded-2xl border border-amber-400/30 shadow-xl">
@@ -991,6 +1049,11 @@ function AboutUsPage() {
 }
 
 function LocationPage() {
+    // Narrar información de ubicación
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        setTimeout(() => speakText("Página de Ubicación. Visítanos en Avenida Paseo de la Reforma 123, Ciudad de México."), 300);
+    }
+    
     return html`
         <div class="container mx-auto px-4 py-16 text-center">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-12">Ubicación</h1>
@@ -1006,14 +1069,20 @@ function LocationPage() {
 }
 
 function ContactPage() {
+    // Narrar información de contacto
+    if (localStorage.getItem("textToSpeechEnabled") === "enabled") {
+        setTimeout(() => speakText("Página de Contacto. Completa el formulario y nos pondremos en contacto contigo lo antes posible."), 300);
+    }
+    
     return html`
         <div class="container mx-auto px-4 py-16">
             <h1 class="text-5xl text-center font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent mb-12">Contáctanos</h1>
             <div class="max-w-2xl mx-auto glass-dark p-8 rounded-3xl border border-amber-400/30">
                 <form id="contact-form" onsubmit="handleContact(event)">
-                    <div class="mb-4"><label class="text-amber-300 block mb-2">Nombre</label><input id="contactName" class="w-full glass rounded p-2 text-white" placeholder="Ingrese su nombre"/></div>
-                    <div class="mb-4"><label class="text-amber-300 block mb-2">Mensaje</label><textarea id="contactMessage" rows="5" class="w-full glass rounded p-2 text-white" placeholder="Escriba su mensaje"></textarea></div>
-                    <button type="submit" class="gradient-gold px-6 py-2 rounded-full font-bold hover:scale-105 transition">Enviar</button>
+                    <div class="mb-4"><label class="text-amber-300 block mb-2">Nombre</label><input id="contactName" class="w-full glass rounded p-2 text-white" placeholder="Ingrese su nombre" aria-label="Campo de nombre. Ingresa tu nombre completo para que podamos identificarte"/></div>
+                    <div class="mb-4"><label class="text-amber-300 block mb-2">Correo</label><input id="contactEmail" type="email" class="w-full glass rounded p-2 text-white" placeholder="tu@correo.com" aria-label="Campo de correo electrónico. Ingresa tu correo para que podamos responderte" required/></div>
+                    <div class="mb-4"><label class="text-amber-300 block mb-2">Mensaje</label><textarea id="contactMessage" rows="5" class="w-full glass rounded p-2 text-white" placeholder="Escriba su mensaje" aria-label="Campo de mensaje. Escribe tu mensaje o consulta aquí"></textarea></div>
+                    <button type="submit" class="gradient-gold px-6 py-2 rounded-full font-bold hover:scale-105 transition" aria-label="Botón para enviar tu mensaje de contacto">Enviar</button>
                 </form>
             </div>
         </div>
@@ -1026,7 +1095,7 @@ function renderAdminProductList(products) {
     }
     return products.map(p => html`
         <div class="glass p-3 rounded-lg border border-white/5 flex items-center gap-4 hover:bg-white/5 transition group">
-            <img src="${p.image}" class="w-12 h-12 rounded object-cover border border-white/10"/>
+            <img src="${p.image}" alt="${p.name} - Fragancia disponible con ${p.stock} unidades en stock" class="w-12 h-12 rounded object-cover border border-white/10"/>
             <div class="flex-1">
                 <h5 class="text-amber-200 font-bold text-sm leading-tight">${p.name}</h5>
                 <p class="text-xs text-gray-400">$${p.price} | Stock: ${p.stock}</p>
@@ -1226,6 +1295,7 @@ function AdminPage() {
                                 <span class="absolute left-3 top-2.5 text-gray-400">${icons.Search(18)}</span>
                                 <input type="text" 
                                     placeholder="Buscar producto por nombre..." 
+                                    aria-label="Buscar productos por nombre"
                                     value="${state.adminSearchQuery}"
                                     oninput="updateAdminSearch(this.value)"
                                     class="w-full pl-10 pr-4 py-2 rounded-lg bg-black/40 text-white border border-amber-400/20 focus:border-amber-400 outline-none transition-all"
@@ -1614,17 +1684,139 @@ function renderApp() {
         default: pageContent = HomePage();
     }
 
+    // Crear el dropdown global que estará siempre disponible
+    const categoryDropdown = state.categoryDropdownOpen ? html`
+        <div class="fixed top-14 left-1/2 transform -translate-x-1/2 w-56 glass-dark rounded-xl shadow-2xl border border-amber-400/30 z-[9999] animate-fadeInUp" role="menu" onclick="event.stopPropagation()">
+            <a href="#" onclick="setCategoryFilter('all')" role="menuitem" class="block px-4 py-3 text-sm text-amber-200 ${'all' === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">Todos los Productos</a>
+            <a href="#" onclick="setCategoryFilter('hombre')" role="menuitem" class="block px-4 py-3 text-sm text-amber-200 ${'hombre' === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">Para Hombre</a>
+            <a href="#" onclick="setCategoryFilter('mujer')" role="menuitem" class="block px-4 py-3 text-sm text-amber-200 ${'mujer' === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">Para Mujer</a>
+            <a href="#" onclick="setCategoryFilter('nicho')" role="menuitem" class="block px-4 py-3 text-sm text-amber-200 ${'nicho' === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">Nicho</a>
+            <a href="#" onclick="setCategoryFilter('designer')" role="menuitem" class="block px-4 py-3 text-sm text-amber-200 ${'designer' === state.currentCategory ? 'bg-amber-500/50 font-bold' : 'hover:bg-amber-500/30'} transition-colors">De Diseñador</a>
+        </div>
+    ` : '';
+
     if (['login', 'register'].includes(state.currentPage)) {
-        appContainer.innerHTML = NotificationBanner() + pageContent;
+        appContainer.innerHTML = NotificationBanner() + pageContent + categoryDropdown;
     } else if (state.currentPage === 'admin') {
-        appContainer.innerHTML = NotificationBanner() + Navbar() + '<main class="pb-16">' + pageContent + '</main>';
+        appContainer.innerHTML = NotificationBanner() + Navbar() + categoryDropdown + '<main class="pb-16">' + pageContent + '</main>';
     } else {
-        appContainer.innerHTML = NotificationBanner() + Navbar() + '<main class="pb-16">' + pageContent + '</main>' + Footer();
+        appContainer.innerHTML = NotificationBanner() + Navbar() + categoryDropdown + '<main class="pb-16">' + pageContent + '</main>' + Footer();
     }
 
     if (state.currentPage === 'home') startCarousel();
+    
+    // Reiniciar narración interactiva cuando cambia la página
+    if (typeof setupInteractiveNarration === 'function') {
+        setTimeout(() => {
+            setupInteractiveNarration();
+        }, 100);
+    }
 }
 window.onload = function() { 
     checkSession();
     fetchProductsFromDB();
+    setupKeyboardNavigation();
 };
+
+// Configurar navegación por teclado global
+function setupKeyboardNavigation() {
+    document.addEventListener('keydown', function(e) {
+        // Escape: cerrar menús, diálogos y paneles
+        if (e.key === 'Escape') {
+            let chatbox = document.getElementById('chatbox');
+            let configbox = document.getElementById('configbox');
+            
+            if (chatbox && chatbox.style.display === 'flex') {
+                toggleChat();
+                e.preventDefault();
+            }
+            if (configbox && configbox.style.display === 'flex') {
+                toggleConfig();
+                e.preventDefault();
+            }
+            
+            // También cerrar el dropdown si está abierto
+            if (state.categoryDropdownOpen) {
+                setState({categoryDropdownOpen: false});
+                e.preventDefault();
+            }
+        }
+        
+        // Alt + C: Abrir/cerrar chat
+        if (e.altKey && e.key === 'c') {
+            toggleChat();
+            e.preventDefault();
+        }
+        
+        // Alt + S: Abrir/cerrar configuración
+        if (e.altKey && e.key === 's') {
+            toggleConfig();
+            e.preventDefault();
+        }
+        
+        // Alt + H: Ir al inicio
+        if (e.altKey && e.key === 'h') {
+            setState({currentPage: 'home'});
+            e.preventDefault();
+        }
+        
+        // Tab: Manejar navegación en el dropdown
+        if (e.key === 'Tab') {
+            if (state.categoryDropdownOpen) {
+                const dropdownMenu = document.querySelector('[role="menu"]');
+                if (dropdownMenu) {
+                    const menuItems = dropdownMenu.querySelectorAll('[role="menuitem"]');
+                    const activeElement = document.activeElement;
+                    
+                    // Si estamos en el botón de dropdown y presionamos Tab, ir al primer elemento del dropdown
+                    if (activeElement && activeElement.getAttribute('aria-haspopup') === 'true') {
+                        menuItems[0]?.focus();
+                        e.preventDefault();
+                    }
+                    // Si estamos en un elemento del dropdown
+                    else if (menuItems.length > 0 && Array.from(menuItems).includes(activeElement)) {
+                        const currentIndex = Array.from(menuItems).indexOf(activeElement);
+                        
+                        if (e.shiftKey) {
+                            // Shift + Tab: ir al anterior
+                            if (currentIndex === 0) {
+                                // Si es el primero, volver al botón
+                                const categoryButton = document.querySelector('[aria-haspopup="true"][aria-expanded="true"]');
+                                categoryButton?.focus();
+                                e.preventDefault();
+                            } else {
+                                menuItems[currentIndex - 1]?.focus();
+                                e.preventDefault();
+                            }
+                        } else {
+                            // Tab: ir al siguiente
+                            if (currentIndex === menuItems.length - 1) {
+                                // Si es el último, cerrar y pasar al siguiente elemento
+                                setState({categoryDropdownOpen: false});
+                                // El navegador naturalmente pasará al siguiente elemento
+                            } else {
+                                menuItems[currentIndex + 1]?.focus();
+                                e.preventDefault();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Enter en el input del chat
+        if (e.key === 'Enter') {
+            let input = document.getElementById('input');
+            if (document.activeElement === input) {
+                sendMessage();
+                e.preventDefault();
+            }
+        }
+    });
+    
+    // Enfocar en el primer elemento focusable cuando se carga la página
+    setTimeout(() => {
+        let firstFocusable = document.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) firstFocusable.focus();
+    }, 500);
+}

@@ -7,13 +7,14 @@
     <style>
         body { background: #0f172a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
         .card { background: rgba(30, 41, 59, 0.7); padding: 40px; border-radius: 20px; border: 1px solid rgba(251, 191, 36, 0.3); }
+        a:focus { outline: 2px solid #fbbf24; outline-offset: 2px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1 class="text-4xl text-green-400 font-bold mb-4">¡Pago Exitoso! 🎉</h1>
+        <h1 class="text-4xl text-green-400 font-bold mb-4" role="status" aria-live="polite">¡Pago Exitoso! 🎉</h1>
         <p class="text-gray-300 mb-8">Gracias por tu compra. Estamos procesando tu pedido.</p>
-        <a href="/" class="bg-yellow-500 text-black px-6 py-3 rounded-full font-bold hover:bg-yellow-400 transition">Volver a la Tienda</a>
+        <a href="/" class="bg-yellow-500 text-black px-6 py-3 rounded-full font-bold hover:bg-yellow-400 transition" aria-label="Volver a la tienda principal">Volver a la Tienda</a>
     </div>
 
     <script>

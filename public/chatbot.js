@@ -22,6 +22,11 @@ messages.innerHTML='<div class="bot">Hola 👋 Bienvenido a nuestra perfumería 
 chat.style.display="flex";
 // Cerrar configuración si está abierta
 config.style.display="none";
+// Enfocar en el input del chat cuando se abre
+setTimeout(() => {
+  let input = document.getElementById("input");
+  if(input) input.focus();
+}, 100);
 }
 
 }

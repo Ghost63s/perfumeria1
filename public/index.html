@@ -23,13 +23,13 @@
 <!-- CONTENEDOR DE BOTONES FLOTANTES -->
 <div class="floating-buttons-container">
   <!-- BOTÓN DE CONFIGURACIÓN -->
-  <button class="config-button" onclick="toggleConfig()">⚙️</button>
+  <button class="config-button" onclick="toggleConfig()" aria-label="Abrir panel de configuración">⚙️</button>
 
   <!-- PANEL DE CONFIGURACIÓN -->
   <div class="config-container" id="configbox">
     <div class="config-header">
       Configuración
-      <span class="close-config" onclick="toggleConfig()">✖</span>
+      <span class="close-config" onclick="toggleConfig()" aria-label="Cerrar configuración">✖</span>
     </div>
     <div class="config-content">
       <div class="config-option">
@@ -45,11 +45,18 @@
         </label>
         <input type="range" id="font-size-slider" min="100" max="200" value="100" onchange="changeFontSize()" class="font-slider">
       </div>
+
+      <div class="config-option">
+        <label for="tts-toggle">
+          <input type="checkbox" id="tts-toggle" onchange="toggleTextToSpeech()">
+          🔊 Narrador de Voz
+        </label>
+      </div>
     </div>
   </div>
 
   <!-- BOTÓN FLOTANTE -->
-  <button class="chat-button" onclick="toggleChat()">💬</button>
+  <button class="chat-button" onclick="toggleChat()" aria-label="Abrir chat de asistencia">💬</button>
 </div>
 
 <!-- CHATBOT -->
@@ -57,17 +64,17 @@
 
   <div class="chat-header">
     Asistente de Perfumería
-    <span class="close-chat" onclick="toggleChat()">✖</span>
+    <span class="close-chat" onclick="toggleChat()" aria-label="Cerrar chat">✖</span>
   </div>
 
   <div class="chat-messages" id="messages">
     <div class="bot">Hola 👋 Bienvenido. ¿En qué puedo ayudarte?</div>
 
     <div class="quick-buttons">
-      <button onclick="quickQuestion('precio')">Precios</button>
-      <button onclick="quickQuestion('promociones')">Promociones</button>
-      <button onclick="quickQuestion('ubicacion')">Ubicación</button>
-      <button onclick="quickQuestion('horario')">Horario</button>
+      <button onclick="quickQuestion('precio')" aria-label="Ver información sobre precios">Precios</button>
+      <button onclick="quickQuestion('promociones')" aria-label="Ver promociones disponibles">Promociones</button>
+      <button onclick="quickQuestion('ubicacion')" aria-label="Ver ubicación de la tienda">Ubicación</button>
+      <button onclick="quickQuestion('horario')" aria-label="Ver horario de atención">Horario</button>
     </div>
 
   </div>
@@ -75,8 +82,8 @@
   <div class="typing" id="typing">El asistente está escribiendo...</div>
 
   <div class="chat-input">
-    <input id="input" placeholder="Escribe tu mensaje...">
-    <button onclick="sendMessage()">Enviar</button>
+    <input id="input" placeholder="Escribe tu mensaje..." aria-label="Campo de entrada para mensaje de chat" onkeypress="if(event.key==='Enter') sendMessage()">
+    <button onclick="sendMessage()" aria-label="Enviar mensaje">Enviar</button>
   </div>
 
 <script src="chatbot.js"></script>
