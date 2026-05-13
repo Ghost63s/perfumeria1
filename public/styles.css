@@ -999,3 +999,7 @@ body.guided-reading li {
 .guided-word-highlight {
     animation: guidedWordEnter 0.12s ease-out !important;
 }
+
+.grecaptcha-badge {
+    visibility: hidden !important;
+}

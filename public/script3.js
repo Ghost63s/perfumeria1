@@ -396,11 +396,20 @@ async function handleLogin(e) {
         return;
     }
 
+    // ✅ NUEVO: Obtener token de reCAPTCHA antes de enviar
+    let recaptchaToken;
+    try {
+        recaptchaToken = await grecaptcha.execute('6LcD--QsAAAAALbKIkAdKuBHbvDZgxQEvFdVz_6f', { action: 'login' });
+    } catch (err) {
+        setState({ error: '⚠️ Error al verificar el captcha. Recarga la página.' });
+        return;
+    }
+
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, recaptchaToken }) // ✅ NUEVO: se agrega el token
         });
 
         const data = await response.json();
@@ -789,7 +798,7 @@ function LoginPage() {
     return html`
         <div class="flex items-center justify-center min-h-screen bg-gray-900/90 py-12">
         <div class="relative glass-dark p-8 md:p-12 rounded-3xl shadow-2xl border border-amber-400/30 w-full max-w-md animate-fadeInUp">
-                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm" aria-label="Regresar a la página anterior">
+                <button onclick="setState({currentPage: 'home'})" class="absolute top-6 left-6 text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2 font-bold text-sm">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     Regresar
                 </button>
@@ -798,16 +807,24 @@ function LoginPage() {
                 <form id="login-form" onsubmit="handleLogin(event)">
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Correo</label>
-                        <input type="email" name="username" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="ejemplo@correo.com" aria-label="Campo de correo electrónico. Ingresa tu correo para iniciar sesión"/>
+                        <input type="email" name="username" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="ejemplo@correo.com"/>
                     </div>
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-amber-300 mb-2">Contraseña</label>
-                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="••••••" aria-label="Campo de contraseña. Ingresa tu contraseña para iniciar sesión"/>
+                        <input type="password" name="password" required class="w-full px-4 py-3 glass rounded-xl text-white border border-amber-400/30" placeholder="••••••"/>
                     </div>
-                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg" aria-label="Botón para acceder a tu cuenta">ACCEDER</button>
+
+                    <!-- ✅ Token oculto que se llena antes del submit -->
+                    <input type="hidden" id="recaptcha-token" name="recaptchaToken"/>
+
+                    <button type="submit" class="w-full gradient-gold text-gray-900 px-8 py-4 rounded-full font-bold shadow-2xl transition-all hover:scale-105 btn-premium text-lg">ACCEDER</button>
+                    <p class="text-xs text-amber-200/40 text-center mt-3">
+                    Protegido por 
+                    <a href="https://policies.google.com/privacy" target="_blank" class="underline hover:text-amber-200/60">reCAPTCHA</a>
+                    </p>
                 </form>
                 <p class="text-center text-amber-200/70 mt-6">
-                    ¿No tienes cuenta? <button onclick="setState({currentPage: 'register'})" class="text-amber-400 font-bold hover:underline" aria-label="Ir a la página de registro">Regístrate</button>
+                    ¿No tienes cuenta? <button onclick="setState({currentPage: 'register'})" class="text-amber-400 font-bold hover:underline">Regístrate</button>
                 </p>
             </div>
         </div>

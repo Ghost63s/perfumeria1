@@ -78,7 +78,28 @@ app.put('/api/admin/users/:id', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, recaptchaToken } = req.body;
+
+    try {
+        const verifyResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`
+        });
+
+        const captchaData = await verifyResponse.json();
+
+
+
+        if (!captchaData.success || captchaData.score < 0.5) {
+            return res.status(403).json({ success: false, message: 'Verificación de seguridad fallida. Intenta de nuevo.' });
+        }
+
+    } catch (err) {
+        console.error('Error verificando captcha:', err);
+        return res.status(500).json({ success: false, message: 'Error al verificar captcha.' });
+    }
+
     try {
         const query = 'SELECT id, nombre, correo, rol FROM usuarios WHERE correo = $1 AND contrasena_hash = $2';
         const { rows } = await db.query(query, [username, password]);
